@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This is the repository for the web application and the backend for Wonder Studio - Agent Testing.
+The web frontend that allows employees of the Wonder company to run test on the backend agent and see their results.
+It is an internal company tool.
