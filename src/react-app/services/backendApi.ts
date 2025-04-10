@@ -1,7 +1,7 @@
 import { AgentRequest } from "@/models/AgentRequest";
 import { AgentResponse } from "@/models/AgentResponse";
 import { PaymentApprovalMessage } from "@/models/PaymentApprovalMessage";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore/lite";
+import { doc, getDoc } from "firebase/firestore/lite";
 import { firestore } from "@/react-app/lib/firebase";
 
 export async function converseWithAgent(request: AgentRequest) {

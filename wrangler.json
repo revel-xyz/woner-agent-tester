@@ -12,6 +12,7 @@
     "not_found_handling": "single-page-application"
   },
   "vars": {
-    "BASE_API_URL": "http://127.0.0.1:5001/halpro-dev/us-central1"
+    "BACKEND_API_URL": "https://us-central1-halpro-dev.cloudfunctions.net",
+    "HALPRO_API_URL": "https://us-central1-halpro-dev.cloudfunctions.net"
   }
 }
