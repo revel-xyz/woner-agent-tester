@@ -7,7 +7,12 @@ import { AgentResponse } from "@/models/AgentResponse";
 import { Modal } from "@/react-app/components/Modal";
 import { PaymentApprovalMessage } from "@/models/PaymentApprovalMessage";
 import { toast } from "sonner";
-import { addSavedRequest, useSavedRequests } from "@/react-app/state/appState";
+import {
+  addSavedRequest,
+  useSavedRequests,
+  setEnvironment,
+  getEnvironment,
+} from "@/react-app/state/appState";
 
 interface Message {
   id: string;
@@ -64,6 +69,8 @@ const HomeScreen: React.FC = () => {
     type: ElementTyps.CHARACTER,
     is_global: false,
   });
+
+  const [environment, setEnvironmentState] = useState(getEnvironment());
 
   const handleContextChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const contextType = e.target.value as "movie" | "scene" | "shot";
@@ -195,6 +202,12 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  const handleEnvironmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newEnvironment = e.target.value as "development" | "local";
+    setEnvironment(newEnvironment);
+    setEnvironmentState(newEnvironment);
+  };
+
   const renderScriptModalContent = () => {
     if (scriptData.isLoading) {
       return (
@@ -258,37 +271,56 @@ const HomeScreen: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Saved Requests Section */}
+        {/* Tester Config Section */}
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-semibold mb-4">Saved Requests</h2>
-          <div className="flex items-center space-x-4">
-            <div className="flex-1">
-              <label htmlFor="saved-requests-select" className="sr-only">
-                Select a saved request
+          <h2 className="text-xl font-semibold mb-4">Tester Config</h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <label
+                htmlFor="environment-select"
+                className="text-base font-medium text-gray-700 whitespace-nowrap"
+              >
+                Connect to environment:
               </label>
               <select
-                id="saved-requests-select"
-                value={selectedSavedRequest}
-                onChange={(e) => setSelectedSavedRequest(e.target.value)}
-                className="w-full p-2 border rounded"
-                aria-label="Select a saved request"
+                id="environment-select"
+                value={environment}
+                onChange={handleEnvironmentChange}
+                className="w-40 p-2 border rounded"
               >
-                <option value="">Select a saved request</option>
-                {savedRequests.map((savedReq) => (
-                  <option key={savedReq.name} value={savedReq.name}>
-                    {savedReq.name}
-                  </option>
-                ))}
+                <option value="local">local</option>
+                <option value="development">development</option>
               </select>
             </div>
-            <button
-              type="button"
-              onClick={handleLoadSavedRequest}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors"
-              disabled={!selectedSavedRequest}
-            >
-              Load Request
-            </button>
+            <div className="flex items-center space-x-4">
+              <div className="flex-1">
+                <label htmlFor="saved-requests-select" className="sr-only">
+                  Select a saved request
+                </label>
+                <select
+                  id="saved-requests-select"
+                  value={selectedSavedRequest}
+                  onChange={(e) => setSelectedSavedRequest(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  aria-label="Select a saved request"
+                >
+                  <option value="">Select a saved request</option>
+                  {savedRequests.map((savedReq) => (
+                    <option key={savedReq.name} value={savedReq.name}>
+                      {savedReq.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleLoadSavedRequest}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md transition-colors"
+                disabled={!selectedSavedRequest}
+              >
+                Load Request
+              </button>
+            </div>
           </div>
         </div>
 

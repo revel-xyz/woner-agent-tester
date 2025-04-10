@@ -6,6 +6,7 @@ import { PaymentApprovalMessage } from "@/models/PaymentApprovalMessage";
 export async function converse(request: AgentRequest) {
   console.log(JSON.stringify(request));
 
+  console.log("conversing with agent", Environment.BACKEND_API_URL);
   const response = await fetch(`${Environment.BACKEND_API_URL}/agent_converse`, {
     method: "POST",
     headers: {

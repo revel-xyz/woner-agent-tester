@@ -6,11 +6,13 @@ import { syncObservable } from "@legendapp/state/sync";
 interface AppState {
   xRayMode: boolean;
   savedRequests: SavedAgentRequest[];
+  environment: "development" | "local";
 }
 
 export const appDataState = observable<AppState>({
   xRayMode: false,
   savedRequests: [],
+  environment: "development",
 });
 
 syncObservable(appDataState, {
@@ -30,3 +32,10 @@ export const toggleXRayMode = () => {
 export const addSavedRequest = (request: AgentRequest, name: string) => {
   appDataState.savedRequests.set([...appDataState.savedRequests.get(), { ...request, name }]);
 };
+
+export const setEnvironment = (environment: "development" | "local") => {
+  console.log("setting environment", environment);
+  appDataState.environment.set(environment);
+};
+
+export const getEnvironment = () => appDataState.environment.get();
