@@ -16,3 +16,7 @@ export interface AgentRequest {
   };
   tagged_elements: { id: string; name: string; type: ElementTyps; is_global: boolean }[];
 }
+
+export interface SavedAgentRequest extends AgentRequest {
+  name: string;
+}
