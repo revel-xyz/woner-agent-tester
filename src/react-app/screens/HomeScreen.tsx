@@ -6,6 +6,7 @@ import { ChatView } from "@/react-app/components/ChatView";
 import { AgentResponse } from "@/models/AgentResponse";
 import { Modal } from "@/react-app/components/Modal";
 import { PaymentApprovalMessage } from "@/models/PaymentApprovalMessage";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
@@ -20,6 +21,13 @@ type ScriptData = {
   isLoading: boolean;
 };
 
+interface TaggedElementFormData {
+  id: string;
+  name: string;
+  type: ElementTyps;
+  is_global: boolean;
+}
+
 const HomeScreen: React.FC = () => {
   const [request, setRequest] = useState<AgentRequest>({
     message: "",
@@ -31,6 +39,7 @@ const HomeScreen: React.FC = () => {
       type: "movie",
       data: {},
     },
+    tagged_elements: [],
   });
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -40,6 +49,15 @@ const HomeScreen: React.FC = () => {
     data: null,
     error: false,
     isLoading: false,
+  });
+
+  // State for tagged element form
+  const [showTaggedElementForm, setShowTaggedElementForm] = useState(false);
+  const [taggedElementForm, setTaggedElementForm] = useState<TaggedElementFormData>({
+    id: "",
+    name: "",
+    type: ElementTyps.CHARACTER,
+    is_global: false,
   });
 
   const handleContextChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -120,6 +138,37 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  // Handle adding a new tagged element
+  const handleAddTaggedElement = () => {
+    // Validate form data
+    if (!taggedElementForm.id || !taggedElementForm.name) {
+      return;
+    }
+
+    // Add the new tagged element to the request
+    setRequest({
+      ...request,
+      tagged_elements: [...request.tagged_elements, taggedElementForm],
+    });
+
+    // Reset form and hide it
+    setTaggedElementForm({
+      id: "",
+      name: "",
+      type: ElementTyps.CHARACTER,
+      is_global: false,
+    });
+    setShowTaggedElementForm(false);
+  };
+
+  // Handle removing a tagged element
+  const handleRemoveTaggedElement = (id: string) => {
+    setRequest({
+      ...request,
+      tagged_elements: request.tagged_elements.filter((element) => element.id !== id),
+    });
+  };
+
   const renderScriptModalContent = () => {
     if (scriptData.isLoading) {
       return (
@@ -134,10 +183,46 @@ const HomeScreen: React.FC = () => {
     }
 
     if (scriptData.data) {
+      const scriptJson = JSON.stringify(scriptData.data, null, 2);
+
+      const handleCopyToClipboard = () => {
+        navigator.clipboard
+          .writeText(scriptJson)
+          .then(() => {
+            toast.success("Script copied to clipboard");
+          })
+          .catch((err) => {
+            console.error("Failed to copy script: ", err);
+            toast.error("Failed to copy script");
+          });
+      };
+
       return (
-        <pre className="whitespace-pre-wrap text-left font-mono text-sm bg-gray-50 p-4 rounded">
-          {JSON.stringify(scriptData.data, null, 2)}
-        </pre>
+        <div className="relative">
+          <button
+            onClick={handleCopyToClipboard}
+            className="absolute top-0 right-0 p-2 text-gray-500 hover:text-blue-500 transition-colors"
+            title="Copy to clipboard"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+              />
+            </svg>
+          </button>
+          <pre className="whitespace-pre-wrap text-left font-mono text-sm bg-gray-50 p-4 rounded mt-8">
+            {scriptJson}
+          </pre>
+        </div>
       );
     }
 
@@ -274,6 +359,140 @@ const HomeScreen: React.FC = () => {
                 />
               </div>
             )}
+
+            {/* Tagged Elements Section */}
+            <div className="border-t pt-4 mt-4">
+              <h2 className="text-lg font-semibold mb-2">Tagged Elements</h2>
+
+              {/* List of tagged elements */}
+              {request.tagged_elements.length > 0 ? (
+                <div className="mb-4 space-y-2">
+                  {request.tagged_elements.map((element) => (
+                    <div
+                      key={element.id}
+                      className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                    >
+                      <div>
+                        <span className="font-medium">{element.name}</span>
+                        <span className="text-sm text-gray-500 ml-2">({element.type})</span>
+                        {element.is_global && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded ml-2">
+                            Global
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTaggedElement(element.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm mb-4">No tagged elements added yet.</p>
+              )}
+
+              {/* Add Tagged Element Button */}
+              {!showTaggedElementForm && (
+                <button
+                  type="button"
+                  onClick={() => setShowTaggedElementForm(true)}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+                >
+                  Tag Element
+                </button>
+              )}
+
+              {/* Tagged Element Form */}
+              {showTaggedElementForm && (
+                <div className="bg-gray-50 p-4 rounded border">
+                  <h3 className="font-medium mb-3">Add Tagged Element</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm text-gray-700">ID</label>
+                      <input
+                        type="text"
+                        value={taggedElementForm.id}
+                        onChange={(e) =>
+                          setTaggedElementForm({ ...taggedElementForm, id: e.target.value })
+                        }
+                        className="w-full p-2 border rounded"
+                        placeholder="Enter element ID"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-700">Name</label>
+                      <input
+                        type="text"
+                        value={taggedElementForm.name}
+                        onChange={(e) =>
+                          setTaggedElementForm({ ...taggedElementForm, name: e.target.value })
+                        }
+                        className="w-full p-2 border rounded"
+                        placeholder="Enter element name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-700">Type</label>
+                      <select
+                        value={taggedElementForm.type}
+                        onChange={(e) =>
+                          setTaggedElementForm({
+                            ...taggedElementForm,
+                            type: e.target.value as ElementTyps,
+                          })
+                        }
+                        className="w-full p-2 border rounded"
+                        title="Select the element type"
+                      >
+                        <option value={ElementTyps.CHARACTER}>CHARACTER</option>
+                        <option value={ElementTyps.PROP}>PROP</option>
+                        <option value={ElementTyps.SET}>SET</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="is-global"
+                        checked={taggedElementForm.is_global}
+                        onChange={(e) =>
+                          setTaggedElementForm({
+                            ...taggedElementForm,
+                            is_global: e.target.checked,
+                          })
+                        }
+                        className="mr-2"
+                      />
+                      <label htmlFor="is-global" className="text-sm text-gray-700">
+                        Is Global
+                      </label>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleAddTaggedElement}
+                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowTaggedElementForm(false)}
+                        className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
               className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600 transition-colors"

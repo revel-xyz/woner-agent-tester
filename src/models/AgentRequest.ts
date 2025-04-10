@@ -14,4 +14,5 @@ export interface AgentRequest {
       movie_id?: string;
     };
   };
+  tagged_elements: { id: string; name: string; type: ElementTyps; is_global: boolean }[];
 }
