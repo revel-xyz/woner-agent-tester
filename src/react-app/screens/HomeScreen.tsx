@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AgentRequest } from "@/models/AgentRequest";
-import { converseWithAgent, getScript } from "@/react-app/services/backendApi";
+import { converseWithAgent, getScript, getTaggableElements } from "@/react-app/services/backendApi";
 import { ElementTyps } from "@/models/enums";
 import { ChatView } from "@/react-app/components/ChatView";
 import { AgentResponse } from "@/models/AgentResponse";
@@ -31,6 +31,14 @@ interface TaggedElementFormData {
   id: string;
   name: string;
   type: ElementTyps;
+  is_global: boolean;
+}
+
+interface TaggableElement {
+  id: string;
+  name: string;
+  type: ElementTyps;
+  uiName: string;
   is_global: boolean;
 }
 
@@ -69,6 +77,9 @@ const HomeScreen: React.FC = () => {
     type: ElementTyps.CHARACTER,
     is_global: false,
   });
+  const [taggableElements, setTaggableElements] = useState<TaggableElement[]>([]);
+  const [isLoadingTaggableElements, setIsLoadingTaggableElements] = useState(false);
+  const [selectedElementId, setSelectedElementId] = useState<string>("");
 
   const [environment, setEnvironmentState] = useState(getEnvironment());
 
@@ -150,28 +161,103 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  // Handle adding a new tagged element
-  const handleAddTaggedElement = () => {
-    // Validate form data
-    if (!taggedElementForm.id || !taggedElementForm.name) {
+  // Function to fetch taggable elements
+  const fetchTaggableElements = async (elementType: ElementTyps) => {
+    if (!request.element_id) {
+      console.error("Cannot fetch taggable elements: No element_id provided");
       return;
     }
 
-    // Add the new tagged element to the request
-    setRequest({
-      ...request,
-      tagged_elements: [...request.tagged_elements, taggedElementForm],
-    });
+    setIsLoadingTaggableElements(true);
+    try {
+      console.log(`Fetching taggable elements for ${request.element_id} with type ${elementType}`);
+      const elements = await getTaggableElements(request.element_id, elementType);
+      console.log("Fetched elements:", elements);
 
-    // Reset form and hide it
+      // Log each element's structure to debug
+      elements.forEach((el, index) => {
+        console.log(`Element ${index}:`, {
+          id: el.id,
+          name: el.name,
+          type: el.type,
+          is_global: el.is_global,
+          uiName: el.uiName,
+          fullElement: el,
+        });
+      });
+
+      setTaggableElements(elements);
+    } catch (error) {
+      console.error("Failed to fetch taggable elements:", error);
+      toast.error("Failed to load taggable elements");
+    } finally {
+      setIsLoadingTaggableElements(false);
+    }
+  };
+
+  // Function to handle type change in the form
+  const handleTaggedElementTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newType = e.target.value as ElementTyps;
     setTaggedElementForm({
+      ...taggedElementForm,
+      type: newType,
       id: "",
       name: "",
-      type: ElementTyps.CHARACTER,
       is_global: false,
     });
-    setShowTaggedElementForm(false);
+    setSelectedElementId("");
+
+    fetchTaggableElements(newType);
   };
+
+  // Function to handle element selection from combo box
+  const handleElementSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value;
+    console.log(`handleElementSelection: Selected element ID: ${selectedId}`);
+
+    if (!selectedId) {
+      // Clear form if no selection
+      setSelectedElementId("");
+      setTaggedElementForm({
+        ...taggedElementForm,
+        id: "",
+        name: "",
+        is_global: false,
+      });
+      return;
+    }
+
+    setSelectedElementId(selectedId);
+
+    // Find the selected element in the taggableElements array
+    console.log("Looking for element with id:", selectedId);
+    console.log(
+      "Available elements:",
+      taggableElements.map((e) => ({ id: e.id, name: e.name }))
+    );
+
+    const selectedElement = taggableElements.find((el) => el.id === selectedId);
+    console.log("Selected element:", selectedElement);
+
+    if (selectedElement) {
+      // Update form with selected element data
+      setTaggedElementForm({
+        ...taggedElementForm,
+        id: selectedElement.id,
+        name: selectedElement.name,
+        is_global: selectedElement.is_global,
+      });
+    } else {
+      console.error("Could not find element with id:", selectedId);
+    }
+  };
+
+  // Update the useEffect to fetch taggable elements when the form is shown
+  useEffect(() => {
+    if (showTaggedElementForm && request.element_id) {
+      fetchTaggableElements(taggedElementForm.type);
+    }
+  }, [showTaggedElementForm, request.element_id]);
 
   // Handle removing a tagged element
   const handleRemoveTaggedElement = (id: string) => {
@@ -501,7 +587,9 @@ const HomeScreen: React.FC = () => {
                 {!showTaggedElementForm && (
                   <button
                     type="button"
-                    onClick={() => setShowTaggedElementForm(true)}
+                    onClick={async () => {
+                      setShowTaggedElementForm(true);
+                    }}
                     className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
                   >
                     Tag Element
@@ -514,41 +602,10 @@ const HomeScreen: React.FC = () => {
                     <h3 className="font-medium mb-3">Add Tagged Element</h3>
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-sm text-gray-700">ID</label>
-                        <input
-                          type="text"
-                          value={taggedElementForm.id}
-                          onChange={(e) =>
-                            setTaggedElementForm({ ...taggedElementForm, id: e.target.value })
-                          }
-                          className="w-full p-2 border rounded"
-                          placeholder="Enter element ID"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-700">Name</label>
-                        <input
-                          type="text"
-                          value={taggedElementForm.name}
-                          onChange={(e) =>
-                            setTaggedElementForm({ ...taggedElementForm, name: e.target.value })
-                          }
-                          className="w-full p-2 border rounded"
-                          placeholder="Enter element name"
-                          required
-                        />
-                      </div>
-                      <div>
                         <label className="block text-sm text-gray-700">Type</label>
                         <select
                           value={taggedElementForm.type}
-                          onChange={(e) =>
-                            setTaggedElementForm({
-                              ...taggedElementForm,
-                              type: e.target.value as ElementTyps,
-                            })
-                          }
+                          onChange={handleTaggedElementTypeChange}
                           className="w-full p-2 border rounded"
                           title="Select the element type"
                         >
@@ -557,28 +614,85 @@ const HomeScreen: React.FC = () => {
                           <option value={ElementTyps.SET}>SET</option>
                         </select>
                       </div>
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="is-global"
-                          checked={taggedElementForm.is_global}
-                          onChange={(e) =>
-                            setTaggedElementForm({
-                              ...taggedElementForm,
-                              is_global: e.target.checked,
-                            })
-                          }
-                          className="mr-2"
-                        />
-                        <label htmlFor="is-global" className="text-sm text-gray-700">
-                          Is Global
-                        </label>
+                      <div>
+                        <label className="block text-sm text-gray-700">Element</label>
+                        {isLoadingTaggableElements ? (
+                          <div className="w-full p-2 border rounded bg-gray-100 text-gray-500">
+                            Loading elements...
+                          </div>
+                        ) : taggableElements.length > 0 ? (
+                          <select
+                            value={selectedElementId}
+                            onChange={handleElementSelection}
+                            className="w-full p-2 border rounded"
+                            title="Select an element"
+                          >
+                            <option value="">Select an element</option>
+                            {taggableElements.map((element) => {
+                              console.log(
+                                `Rendering option: id=${element.id}, name=${element.name}, uiName=${element.uiName}`
+                              );
+                              return (
+                                <option key={element.id} value={element.id}>
+                                  {element.uiName}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        ) : (
+                          <div className="w-full p-2 border rounded bg-gray-100 text-gray-500">
+                            No elements available for this type
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-2 pt-2">
                         <button
                           type="button"
-                          onClick={handleAddTaggedElement}
+                          onClick={async () => {
+                            // Check if an element is selected
+                            if (!selectedElementId) {
+                              toast.error("Please select an element");
+                              return;
+                            }
+
+                            // Ensure form is filled with the selected element data
+                            const selectedElement = taggableElements.find(
+                              (el) => el.id === selectedElementId
+                            );
+
+                            if (!selectedElement) {
+                              toast.error("Selected element not found");
+                              return;
+                            }
+
+                            // Update form with selected element data (in case it wasn't already)
+                            const updatedForm = {
+                              id: selectedElement.id,
+                              name: selectedElement.name,
+                              type: selectedElement.type,
+                              is_global: selectedElement.is_global,
+                            };
+
+                            // Add the new tagged element to the request
+                            setRequest({
+                              ...request,
+                              tagged_elements: [...request.tagged_elements, updatedForm],
+                            });
+
+                            // Reset form and hide it
+                            setTaggedElementForm({
+                              id: "",
+                              name: "",
+                              type: ElementTyps.CHARACTER,
+                              is_global: false,
+                            });
+                            setSelectedElementId("");
+                            setShowTaggedElementForm(false);
+
+                            toast.success("Element added successfully");
+                          }}
                           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+                          disabled={!selectedElementId}
                         >
                           Save
                         </button>
