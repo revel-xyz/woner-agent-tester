@@ -7,7 +7,7 @@ export interface AgentRequest {
   element_id: string;
   user_id: string;
   context: {
-    type: "scene" | "shot" | "movie";
+    type: "MOVIE" | "SCENE" | "SHOT";
     data?: {
       scene_id?: string;
       shot_id?: string;

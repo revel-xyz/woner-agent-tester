@@ -50,7 +50,7 @@ const HomeScreen: React.FC = () => {
     element_id: "",
     user_id: "",
     context: {
-      type: "movie",
+      type: "MOVIE",
       data: {},
     },
     tagged_elements: [],
@@ -84,12 +84,12 @@ const HomeScreen: React.FC = () => {
   const [environment, setEnvironmentState] = useState(getEnvironment());
 
   const handleContextChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const contextType = e.target.value as "movie" | "scene" | "shot";
+    const contextType = e.target.value.toUpperCase() as "MOVIE" | "SCENE" | "SHOT";
     setRequest({
       ...request,
       context: {
         type: contextType,
-        data: contextType === "movie" ? {} : {},
+        data: contextType === "MOVIE" ? {} : {},
       },
     });
   };
