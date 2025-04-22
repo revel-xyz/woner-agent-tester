@@ -505,7 +505,7 @@ const HomeScreen: React.FC = () => {
                   <option value="shot">Shot</option>
                 </select>
               </div>
-              {request.context.type === "scene" && (
+              {request.context.type === "SCENE" && (
                 <div>
                   <label className="block text-gray-700">Scene ID</label>
                   <input
@@ -526,7 +526,7 @@ const HomeScreen: React.FC = () => {
                   />
                 </div>
               )}
-              {request.context.type === "shot" && (
+              {request.context.type === "SHOT" && (
                 <div>
                   <label className="block text-gray-700">Shot ID</label>
                   <input
