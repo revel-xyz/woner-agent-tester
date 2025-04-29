@@ -11,7 +11,7 @@ function getBaseApiUrl() {
   const environment = getEnvironment();
   console.log("environment", environment);
   if (environment === "development") {
-    return "https://woner-agent-tester.nechmads.workers.dev";
+    return "https://wonder-spy.nechmads.workers.dev";
   }
   return "http://localhost:5173";
 }
