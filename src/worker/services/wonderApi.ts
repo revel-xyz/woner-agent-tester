@@ -7,7 +7,7 @@ export async function converse(request: AgentRequest) {
   console.log(JSON.stringify(request));
 
   console.log("conversing with agent", Environment.BACKEND_API_URL);
-  const response = await fetch(`${Environment.BACKEND_API_URL}/agent_converse`, {
+  const response = await fetch(`${Environment.BACKEND_API_URL}/converse_with_agent_on_movie`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -26,7 +26,7 @@ export async function converse(request: AgentRequest) {
 
 export async function approvePayment(message: PaymentApprovalMessage) {
   console.log("approvePayment", message);
-  const response = await fetch(`${Environment.BACKEND_API_URL}/agent_responsd_to_payment_request`, {
+  const response = await fetch(`${Environment.BACKEND_API_URL}/approve_purchase_order`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

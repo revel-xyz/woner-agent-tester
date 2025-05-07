@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { AgentRequest } from "@/models/AgentRequest";
 import { converseWithAgent, getScript, getTaggableElements } from "@/react-app/services/backendApi";
-import { ElementTyps } from "@/models/enums";
+import { ContextType, ElementTyps } from "@/models/enums";
 import { ChatView } from "@/react-app/components/ChatView";
 import { AgentResponse } from "@/models/AgentResponse";
 import { Modal } from "@/react-app/components/Modal";
@@ -13,12 +12,14 @@ import {
   setEnvironment,
   getEnvironment,
 } from "@/react-app/state/appState";
+import { ConverseWithAgentRequest } from "@/models/ConverseWithAgentRequest";
+import { AgentConverseResponse, AgentConverseMessageType } from "@/models/AgentConverseResponse";
 
 interface Message {
   id: string;
   isUser: boolean;
   timestamp: string;
-  data: AgentRequest | AgentResponse | PaymentApprovalMessage;
+  data: ConverseWithAgentRequest | AgentConverseResponse | PaymentApprovalMessage;
 }
 
 type ScriptData = {
@@ -43,17 +44,25 @@ interface TaggableElement {
 }
 
 const HomeScreen: React.FC = () => {
-  const [request, setRequest] = useState<AgentRequest>({
+  const [request, setRequest] = useState<ConverseWithAgentRequest>({
     message: "",
     element_type: ElementTyps.MOVIE,
     root_element_id: "",
     element_id: "",
     user_id: "",
     context: {
-      type: "MOVIE",
-      data: {},
+      type: ContextType.MOVIE,
+      data: {
+        taggable_elements: [
+          {
+            id: "",
+            name: "",
+            type: ElementTyps.MOVIE,
+            is_global: false,
+          },
+        ],
+      },
     },
-    tagged_elements: [],
   });
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -84,18 +93,18 @@ const HomeScreen: React.FC = () => {
   const [environment, setEnvironmentState] = useState(getEnvironment());
 
   const handleContextChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const contextType = e.target.value.toUpperCase() as "MOVIE" | "SCENE" | "SHOT";
+    const contextType = e.target.value as ContextType;
     setRequest({
       ...request,
       context: {
         type: contextType,
-        data: contextType === "MOVIE" ? {} : {},
+        data: contextType === ContextType.MOVIE ? {} : {},
       },
     });
   };
 
   const addMessage = (
-    data: AgentRequest | AgentResponse | PaymentApprovalMessage,
+    data: ConverseWithAgentRequest | AgentConverseResponse | PaymentApprovalMessage,
     isUser: boolean
   ) => {
     const newMessage: Message = {
@@ -109,27 +118,19 @@ const HomeScreen: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Add user message to chat
     addMessage(request, true);
-
-    // Show loading state
     setIsLoading(true);
-
     try {
       const response = await converseWithAgent(request);
-      // Add agent response to chat
       addMessage(response, false);
     } catch (error) {
       addMessage(
         {
-          content: {
-            message: `Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`,
-            price_in_credits: 0,
-          },
-          conversation_id: "error",
-          message_type: "error",
-          role: "assistant",
+          message: `Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`,
+          enhanced_message: "",
+          role: "agent",
+          message_type: AgentConverseMessageType.AGENT_MESSAGE,
+          data: {},
         },
         false
       );
@@ -263,7 +264,20 @@ const HomeScreen: React.FC = () => {
   const handleRemoveTaggedElement = (id: string) => {
     setRequest({
       ...request,
-      tagged_elements: request.tagged_elements.filter((element) => element.id !== id),
+      context: {
+        ...request.context,
+        data: {
+          ...request.context.data,
+          taggable_elements: [
+            {
+              id: "",
+              name: "",
+              type: ElementTyps.MOVIE,
+              is_global: false,
+            },
+          ],
+        },
+      },
     });
   };
 
@@ -282,7 +296,6 @@ const HomeScreen: React.FC = () => {
         element_id: savedRequest.element_id,
         user_id: savedRequest.user_id,
         context: savedRequest.context,
-        tagged_elements: savedRequest.tagged_elements,
       });
       toast.success(`Loaded request: ${savedRequest.name}`);
     }
@@ -500,9 +513,9 @@ const HomeScreen: React.FC = () => {
                   className="w-full p-2 border rounded"
                   title="Select the context type for the request"
                 >
-                  <option value="movie">Movie</option>
-                  <option value="scene">Scene</option>
-                  <option value="shot">Shot</option>
+                  <option value={ContextType.MOVIE}>Movie</option>
+                  <option value={ContextType.SCENE}>Scene</option>
+                  <option value={ContextType.SHOT}>Shot</option>
                 </select>
               </div>
               {request.context.type === "SCENE" && (
@@ -553,35 +566,28 @@ const HomeScreen: React.FC = () => {
                 <h2 className="text-lg font-semibold mb-2">Tagged Elements</h2>
 
                 {/* List of tagged elements */}
-                {request.tagged_elements.length > 0 ? (
+                {request.context.data &&
+                request.context.data.taggable_elements &&
+                request.context.data.taggable_elements[0] &&
+                request.context.data.taggable_elements[0].id !== "" ? (
                   <div className="mb-4 space-y-2">
-                    {request.tagged_elements.map((element) => (
-                      <div
-                        key={element.id}
-                        className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                    <div
+                      key={request.context.data.taggable_elements[0].id}
+                      className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                    >
+                      <span>{request.context.data.taggable_elements[0].name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleRemoveTaggedElement(request.context.data!.taggable_elements[0].id)
+                        }
+                        className="text-red-500 hover:text-red-700"
                       >
-                        <div>
-                          <span className="font-medium">{element.name}</span>
-                          <span className="text-sm text-gray-500 ml-2">({element.type})</span>
-                          {element.is_global && (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded ml-2">
-                              Global
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveTaggedElement(element.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
+                        Remove
+                      </button>
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-sm mb-4">No tagged elements added yet.</p>
-                )}
+                ) : null}
 
                 {/* Add Tagged Element Button */}
                 {!showTaggedElementForm && (
@@ -676,7 +682,13 @@ const HomeScreen: React.FC = () => {
                             // Add the new tagged element to the request
                             setRequest({
                               ...request,
-                              tagged_elements: [...request.tagged_elements, updatedForm],
+                              context: {
+                                ...request.context,
+                                data: {
+                                  ...request.context.data,
+                                  taggable_elements: [updatedForm],
+                                },
+                              },
                             });
 
                             // Reset form and hide it

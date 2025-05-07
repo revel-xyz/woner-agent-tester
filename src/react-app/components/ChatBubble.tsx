@@ -1,18 +1,19 @@
 import React, { useState } from "react";
-import { AgentRequest } from "@/models/AgentRequest";
-import { AgentResponse } from "@/models/AgentResponse";
+import { ConverseWithAgentRequest } from "@/models/ConverseWithAgentRequest";
+import { AgentConverseMessageType, AgentConverseResponse } from "@/models/AgentConverseResponse";
 import { approvePayment, getPendingChanges } from "@/react-app/services/backendApi";
 import { PaymentApprovalMessage } from "@/models/PaymentApprovalMessage";
 import { Modal } from "./Modal";
 import { toast } from "sonner";
 import { useXRayMode } from "@/react-app/state/appState";
 import { observer } from "@legendapp/state/react";
+
 interface ChatBubbleProps {
-  message: AgentRequest | AgentResponse | PaymentApprovalMessage;
+  message: ConverseWithAgentRequest | AgentConverseResponse | PaymentApprovalMessage;
   isUser: boolean;
   timestamp?: string;
   onNewMessage?: (
-    message: AgentRequest | AgentResponse | PaymentApprovalMessage,
+    message: ConverseWithAgentRequest | AgentConverseResponse | PaymentApprovalMessage,
     isUser: boolean
   ) => void;
   rootMovieId?: string;
@@ -41,18 +42,18 @@ export const ChatBubble: React.FC<ChatBubbleProps> = observer(
       if (!xRayMode) {
         if (isUser && "message" in message) {
           return message.message;
-        } else if (!isUser && "content" in message) {
-          return message.content.message;
+        } else if (!isUser && "message" in message) {
+          return message.message;
         }
       }
       return JSON.stringify(message, null, 2);
     }, [message, isUser, xRayMode]);
 
     const handleApprovePayment = async () => {
+      console.log("message", message, rootMovieId);
       if (
         !("message_type" in message) ||
-        !("conversation_id" in message) ||
-        !message.payment_request_id ||
+        !message.data.purchase_order_id ||
         !rootMovieId ||
         !userId
       ) {
@@ -61,9 +62,9 @@ export const ChatBubble: React.FC<ChatBubbleProps> = observer(
       }
 
       const approvalMessage = {
-        conversation_id: message.conversation_id,
-        root_movie_id: rootMovieId,
-        payment_request_id: message.payment_request_id,
+        conversation_id: rootMovieId as string,
+        root_element_id: rootMovieId,
+        purchase_order_id: message.data.purchase_order_id,
         is_approved: true,
         user_id: userId,
       };
@@ -80,15 +81,17 @@ export const ChatBubble: React.FC<ChatBubbleProps> = observer(
         console.error("Failed to approve payment:", error);
         onNewMessage?.(
           {
-            content: {
-              message: `Error: ${
-                error instanceof Error ? error.message : "Failed to approve payment"
-              }`,
-              price_in_credits: 0,
-            },
+            message: `Error: ${
+              error instanceof Error ? error.message : "Failed to approve payment"
+            }`,
+            enhanced_message: `Error: ${
+              error instanceof Error ? error.message : "Failed to approve payment"
+            }`,
+
             conversation_id: "error",
-            message_type: "error",
-            role: "assistant",
+            message_type: AgentConverseMessageType.ERROR,
+            role: "agent",
+            data: {},
           },
           false
         );
@@ -96,7 +99,7 @@ export const ChatBubble: React.FC<ChatBubbleProps> = observer(
     };
 
     const handleShowScriptChanges = async () => {
-      if (!("message_type" in message) || !message.payment_request_id) {
+      if (!("message_type" in message) || !message.data.purchase_order_id) {
         console.error("Missing payment request ID");
         return;
       }
@@ -105,15 +108,13 @@ export const ChatBubble: React.FC<ChatBubbleProps> = observer(
       setIsModalOpen(true);
 
       try {
-        const changes = await getPendingChanges(message.payment_request_id);
+        const changes = await getPendingChanges(message.data.purchase_order_id);
 
         if (changes === null) {
           setScriptChanges({ data: null, error: true, isPending: false });
-        } else if (changes === "") {
-          setScriptChanges({ data: null, error: false, isPending: true });
         } else {
           try {
-            const parsedChanges = JSON.parse(changes);
+            const parsedChanges = changes;
             setScriptChanges({ data: parsedChanges, error: false, isPending: false });
           } catch (parseError) {
             console.error("Failed to parse script changes:", parseError);
@@ -129,7 +130,9 @@ export const ChatBubble: React.FC<ChatBubbleProps> = observer(
     };
 
     const isPaymentRequest =
-      !isUser && "message_type" in message && message.message_type === "payment_request";
+      !isUser &&
+      "message_type" in message &&
+      message.message_type === AgentConverseMessageType.PAYMENT_REQUEST;
 
     const renderModalContent = () => {
       if (isLoadingChanges) {

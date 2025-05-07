@@ -4,3 +4,9 @@ export enum ElementTyps {
   PROP = "PROP",
   SET = "SET",
 }
+
+export enum ContextType {
+  MOVIE = "MOVIE",
+  SCENE = "SCENE",
+  SHOT = "SHOT",
+}

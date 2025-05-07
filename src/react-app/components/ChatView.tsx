@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import { ChatBubble } from "./ChatBubble";
 import { LoadingBubble } from "./LoadingBubble";
-import { AgentRequest } from "@/models/AgentRequest";
-import { AgentResponse } from "@/models/AgentResponse";
+import { ConverseWithAgentRequest } from "@/models/ConverseWithAgentRequest";
+import { AgentConverseResponse } from "@/models/AgentConverseResponse";
 import { PaymentApprovalMessage } from "@/models/PaymentApprovalMessage";
 import { Switch } from "./ui/switch";
 import { Label } from "./ui/label";
@@ -14,14 +14,14 @@ interface Message {
   id: string;
   isUser: boolean;
   timestamp: string;
-  data: AgentRequest | AgentResponse | PaymentApprovalMessage;
+  data: ConverseWithAgentRequest | AgentConverseResponse | PaymentApprovalMessage;
 }
 
 interface ChatViewProps {
   messages: Message[];
   isLoading?: boolean;
   onNewMessage?: (
-    message: AgentRequest | AgentResponse | PaymentApprovalMessage,
+    message: ConverseWithAgentRequest | AgentConverseResponse | PaymentApprovalMessage,
     isUser: boolean
   ) => void;
   rootMovieId?: string;

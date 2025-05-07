@@ -6,17 +6,19 @@ import { firestore } from "@/react-app/lib/firebase";
 import { getEnvironment } from "@/react-app/state/appState";
 import { ElementTyps } from "@/models/enums";
 import { getScriptFromCache, setScriptInCache } from "@/react-app/state/cacheState";
+import { ConverseWithAgentRequest } from "@/models/ConverseWithAgentRequest";
+import { AgentConverseResponse } from "@/models/AgentConverseResponse";
 
 function getBaseApiUrl() {
   const environment = getEnvironment();
   console.log("environment", environment);
   if (environment === "development") {
-    return "https://wonder-spy.nechmads.workers.dev";
+    return "https://wonder-super-agent-tester.nechmads.workers.dev";
   }
   return "http://localhost:5173";
 }
 
-export async function converseWithAgent(request: AgentRequest) {
+export async function converseWithAgent(request: ConverseWithAgentRequest) {
   const response = await fetch(`${getBaseApiUrl()}/agent/converse`, {
     method: "POST",
     headers: {
@@ -25,7 +27,7 @@ export async function converseWithAgent(request: AgentRequest) {
     body: JSON.stringify({ request }),
   });
 
-  const agentResponse: AgentResponse = await response.json();
+  const agentResponse: AgentConverseResponse = await response.json();
 
   return agentResponse;
 }
@@ -40,7 +42,7 @@ export async function approvePayment(message: PaymentApprovalMessage) {
     body: JSON.stringify({ message }),
   });
 
-  const agentResponse: AgentResponse = await response.json();
+  const agentResponse: AgentConverseResponse = await response.json();
 
   return agentResponse;
 }
@@ -53,8 +55,8 @@ export async function getAgentContext(conversationId: string) {
   return data;
 }
 
-export async function getPendingChanges(paymentRequestId: string) {
-  const purchaseOrderRef = doc(firestore, "purchase_orders", paymentRequestId);
+export async function getPendingChanges(purchaseOrderId: string) {
+  const purchaseOrderRef = doc(firestore, "purchase_orders", purchaseOrderId);
   const purchaseOrderSnapshot = await getDoc(purchaseOrderRef);
 
   if (!purchaseOrderSnapshot.exists()) {
@@ -64,7 +66,7 @@ export async function getPendingChanges(paymentRequestId: string) {
   const data = purchaseOrderSnapshot.data();
 
   console.log("data", data);
-  return data?.data;
+  return { items: data.items };
 }
 
 export async function getScript(movieId: string) {
